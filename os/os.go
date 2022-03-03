@@ -1,5 +1,7 @@
 package main
 
+// Autor: Marc Roman Colom
+// link youtube: https://youtu.be/H_gPbAeVUEA
 import (
 	"fmt"
 	"strconv"
@@ -12,7 +14,7 @@ const (
 	layout_time = "2006/02/01 15:04:05"
 	nom_coa_os  = "OS_Q"
 	nom_coa_pot = "POT_Q"
-	URL         = "amqp://pep:pep@192.168.1.45:5672/"
+	URL         = "amqp://guest:guest@localhost:5672/"
 )
 
 var os_q amqp.Queue
@@ -30,6 +32,7 @@ func main() {
 		msg := <-abella_msg
 		nom_abella := string(msg.Body[:])
 		fmt.Println(time.Now().Format(layout_time) + " L'ha despertat l'abella " + nom_abella + " i menja " + strconv.Itoa(i) + "/3")
+		//Cada punt indica un segon passat a l'execució de l'os
 		for i := 0; i <= 3; i++ {
 			time.Sleep(time.Second)
 			fmt.Print(".")
@@ -52,8 +55,10 @@ func StartConnexio() {
 	canal, _ = connexio_servidor.Channel()
 	os_q, _ = canal.QueueDeclare(nom_coa_os, true, true, false, false, nil)
 	pot_q, _ = canal.QueueDeclare(nom_coa_pot, true, true, false, false, nil)
+	canal.ExchangeDeclare("amq.fanout", "fanout", true, false, false, false, nil)
 }
 
+//Buida el pot enviant un missatge amb les unitats del pot a 0.
 func BuidaPot() {
 	msg := 0
 	publ := amqp.Publishing{
@@ -68,6 +73,7 @@ func BuidaPot() {
 		publ)
 }
 
+//Envia un missatge per un exchange de tipus fanout a totes les coes unides notificant de que el pot s'ha romput.
 func RomprePot() {
 	msg := -1
 	publ := amqp.Publishing{
@@ -75,8 +81,8 @@ func RomprePot() {
 		Body:        []byte(strconv.Itoa(msg)),
 	}
 	canal.Publish(
+		"amq.fanout",
 		"",
-		pot_q.Name,
 		false,
 		false,
 		publ)
